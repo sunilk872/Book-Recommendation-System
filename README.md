@@ -14,10 +14,10 @@ This project builds a **machine learning-based book recommendation system** that
 
 ---
 
-## 📂 Dataset Overview  
-The project utilizes **three datasets**:  
-
-1️⃣ **Books Dataset 📚** → Contains details like title, author, publication year, and ISBN  
+## 📂 Dataset Overview   
+📌 Dataset Link: 📂https://www.kaggle.com/datasets/arashnic/book-recommendation-dataset
+The project utilizes **three datasets**: 
+1️⃣ **Books Dataset 📚** → Contains details like title, author, publication year, image with different sizes(small, medium, large) and ISBN  
 2️⃣ **Users Dataset 👤** → Includes user IDs, locations, and age details  
 3️⃣ **Ratings Dataset ⭐** → Consists of book ratings provided by users  
 
