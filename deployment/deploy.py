@@ -7,38 +7,24 @@ import seaborn as sns
 import requests
 import pickle
 from io import BytesIO
-
-# Custom CSS styling
-st.markdown("""
-<style>
-    .title {
-        background-color: #0066cc;
+# Custom CSS for Styling
+st.markdown(
+    """
+    <style>
+    .title-container {
+        background-color: #E3F2FD;  /* Light Blue */
         padding: 15px;
         border-radius: 10px;
-        color: white;
         text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        font-size: 28px;
+        font-weight: bold;
+        color: #0D47A1;  /* Dark Blue for contrast */
     }
-    .result {
-        background-color: #4CAF50;
-        padding: 15px;
-        border-radius: 10px;
-        color: white;
-        text-align: center;
-        font-size: 24px;
-        margin: 20px 0;
-    }
-    .section-header {
-        color: #0066cc;
-        border-bottom: 3px solid #0066cc;
-        padding-bottom: 10px;
-        margin: 20px 0;
-    }
-    .sidebar .sidebar-content {
-        background-color: #f0f2f6;
-    }
-</style>
-""", unsafe_allow_html=True)
+    </style>
+    <div class="title-container">📚 Book Recommendation System</div>
+    """,
+    unsafe_allow_html=True
+)
 
 # Page title
 st.markdown("<h1 class='title'>Medical Expenses Predictor</h1>", unsafe_allow_html=True)
