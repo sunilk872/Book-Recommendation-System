@@ -6,35 +6,39 @@ from io import BytesIO
 from scipy.sparse import csr_matrix
 from sklearn.neighbors import NearestNeighbors
 
-def load_csv_from_drive(file_id):
-    url = f"https://drive.google.com/uc?id={file_id}"
-    return pd.read_csv(url, encoding='latin1')
+# Function to Load CSV from Google Drive
+def load_csv_from_drive(url):
+    file_id = url.split("/")[-2]
+    download_url = f"https://drive.google.com/uc?id={file_id}"
+    response = requests.get(download_url)
+    return pd.read_csv(BytesIO(response.content), encoding="latin1")
 
-def load_pickle_from_drive(file_id):
-    url = f"https://drive.google.com/uc?id={file_id}"
-    response = requests.get(url)
-    return pickle.load(BytesIO(response.content))
+# Function to Load Pickle Files from Google Drive
+def load_pickle_from_drive(url):
+    file_id = url.split("/")[-2]
+    download_url = f"https://drive.google.com/uc?id={file_id}"
+    response = requests.get(download_url)
+    return pickle.loads(response.content)
 
-# Load Data from Google Drive
-df = load_csv_from_drive("1ACsDx6V8k19J-S63LSseWYRp_rsM-CG3")
-books_df = load_csv_from_drive("1miWbT_4ltE9uuPPSS2nBRMPNiExyT0Bj")
-ratings = load_csv_from_drive("1dwwXfcI9NzQVliyG-hGueqoTKCDe6G1j")
-users = load_csv_from_drive("1hqaiWx-2Ht_9kWrwGcWGcSu4Y1RO-e95")
+# Load Data
+df = load_csv_from_drive("https://drive.google.com/file/d/1ACsDx6V8k19J-S63LSseWYRp_rsM-CG3/view?usp=sharing")
+books_df = load_csv_from_drive("https://drive.google.com/file/d/1miWbT_4ltE9uuPPSS2nBRMPNiExyT0Bj/view?usp=sharing")
 
 # Merge with book images
 df = pd.merge(df, books_df[['ISBN', 'Image-URL-M']], on='ISBN', how='left')
 
-# Load Pickle Models from Google Drive
-popular_books = load_pickle_from_drive("1f2BNeiE3_8Y9akIvB96QgqgG9JdtiDdQ")
-knn = load_pickle_from_drive("1m-45jM6Q4c32DeyiSEhfAPuUIhohlKSX")
-content_based_data = load_pickle_from_drive("1nbDPLTxckiJnJp8FwFHP1fXyUfyNBsVl")
-user_item_matrix = load_pickle_from_drive("1enD9Rjtbu_zXJFDNtPYxsK4l6Q4ZNaFC")
+# Load Pickle Models
+popular_books = load_pickle_from_drive("https://drive.google.com/file/d/1f2BNeiE3_8Y9akIvB96QgqgG9JdtiDdQ/view?usp=sharing")
+knn = load_pickle_from_drive("https://drive.google.com/file/d/1m-45jM6Q4c32DeyiSEhfAPuUIhohlKSX/view?usp=sharing")
+content_based_data = load_pickle_from_drive("https://drive.google.com/file/d/1nbDPLTxckiJnJp8FwFHP1fXyUfyNBsVl/view?usp=sharing")
+user_item_matrix = load_pickle_from_drive("https://drive.google.com/file/d/1enD9Rjtbu_zXJFDNtPYxsK4l6Q4ZNaFC/view?usp=drive_link")
 
-# Extract Content-Based Filtering Components
+# Extract Content-Based Data
 tfidf = content_based_data['tfidf_model']
 book_similarity = content_based_data['book_similarity_matrix']
-book_index = content_based_data['book_index']
+book_index = {k.lower(): v for k, v in content_based_data['book_index'].items()}  # Lowercase for case-insensitivity
 
+# Recommendation Functions
 def get_popular_recommendations(top_n=10):
     return popular_books.head(top_n)
 
@@ -48,9 +52,10 @@ def get_knn_recommendations_for_user(user_id, n=10):
     return recommended_books.head(n)
 
 def get_content_based_recommendations(book_title, n=15):
-    if book_title not in book_index:
+    book_title_lower = book_title.lower()
+    if book_title_lower not in book_index:
         return "Book not found!"
-    idx = book_index[book_title]
+    idx = book_index[book_title_lower]
     similar_books = book_similarity[idx].argsort()[-n-1:-1][::-1]
     return df.iloc[similar_books][["Book-Title", "Book-Author", "Image-URL-M"]].drop_duplicates()
 
@@ -73,7 +78,7 @@ if option == "Popularity-Based":
 
 elif option == "User-Based Collaborative Filtering":
     st.subheader("👤 Personalized Recommendations")
-    user_id = st.number_input("Enter User ID", min_value=1, step=1)
+    user_id = st.number_input("Enter User ID", min_value=1, step=1, value=388)  # Default user_id set to 388
     if st.button("Get Recommendations"):
         recommendations = get_knn_recommendations_for_user(user_id)
         if isinstance(recommendations, str):
@@ -85,7 +90,7 @@ elif option == "User-Based Collaborative Filtering":
 
 elif option == "Content-Based":
     st.subheader("📖 Content-Based Recommendations")
-    book_title = st.text_input("Enter a book title")
+    book_title = st.text_input("Enter a book title", value="The Da Vinci Code")  # Default book title set
     if st.button("Find Similar Books"):
         recommendations = get_content_based_recommendations(book_title)
         if isinstance(recommendations, str):
