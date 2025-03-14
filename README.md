@@ -1,6 +1,8 @@
 
 
-# 📚 Book Recommendation System ( https://book-recommendation-url.streamlit.app/ )
+# 📚 Book Recommendation System 
+
+( https://book-recommendation-url.streamlit.app/ )
 
 ## 🚀 Overview  
 This project builds a **machine learning-based book recommendation system** that suggests books based on user interests, reading history, and preferences. It leverages **collaborative filtering, content-based filtering, and popularity-based models** to enhance user experience and help readers discover books they'll love.  
