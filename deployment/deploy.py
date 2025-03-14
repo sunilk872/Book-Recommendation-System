@@ -6,6 +6,10 @@ from io import BytesIO
 from scipy.sparse import csr_matrix
 from sklearn.neighbors import NearestNeighbors
 
+# Set Streamlit page configuration
+st.set_page_config(page_title="Book Recommendation System 📖", layout="wide")
+
+
 # Function to Load CSV from Google Drive
 def load_csv_from_drive(url):
     file_id = url.split("/")[-2]
