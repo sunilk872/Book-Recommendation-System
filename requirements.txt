@@ -1,4 +1,10 @@
-📌 Recommended Environment
-      Python 3.8+
-      Jupyter Notebook / Google Colab for development
-      Streamlit for interactive deployment
+# Core dependencies
+streamlit
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+
+# Jupyter Notebook (optional, if needed)
+notebook
