@@ -9,23 +9,25 @@ from sklearn.neighbors import NearestNeighbors
 # Set Streamlit page configuration
 st.set_page_config(page_title="Book Recommendation System 📖", layout="wide")
 
-# Custom CSS for Styling
+# Custom CSS for styling
 st.markdown(
     """
     <style>
     .title-container {
-        background-color: #FFD700;  /* Bright Gold Color */
+        background-color: #f0f8ff;
         padding: 15px;
         border-radius: 10px;
         text-align: center;
-        font-size: 28px;
+    }
+    .method-header {
+        text-decoration: underline;
+        color: #1f77b4;
+        font-size: 20px;
         font-weight: bold;
-        color: #000000;  /* Black text for contrast */
     }
     </style>
-    <div class="title-container">📚 Book Recommendation System</div>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 # Function to Load CSV from Google Drive
