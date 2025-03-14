@@ -7,134 +7,110 @@ from scipy.sparse import csr_matrix
 from sklearn.neighbors import NearestNeighbors
 
 # Set Streamlit page configuration
-st.set_page_config(page_title="Book Recommendation System", layout="wide")
-
-# Custom CSS for Styling
-st.markdown(
-    """
-    <style>
-    body {
-        background-color: #f7f9fc;
-    }
-    .stApp {
-        background-color: #eef2f7;
-    }
-    .book-card {
-        background-color: #ffffff;
-        padding: 15px;
-        border-radius: 10px;
-        box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
-        margin-bottom: 15px;
-    }
-    .book-title {
-        font-size: 18px;
-        font-weight: bold;
-        color: #2c3e50;
-    }
-    .book-author {
-        font-size: 14px;
-        color: #7f8c8d;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
+st.set_page_config(
+    page_title="Book Recommendation System 📖",
+    layout="wide",
+    page_icon="📚",
+    initial_sidebar_state="expanded"
 )
 
-# Function to Load CSV from Google Drive
+# Custom CSS styling
+st.markdown("""
+<style>
+    /* Clean professional styling */
+    .main {background-color: #f8f9fa}
+    .header {color: #2c3e50; padding: 2rem; background: white; border-radius: 15px; margin-bottom: 2rem}
+    .book-card {background: white; border-radius: 15px; padding: 1.5rem; margin: 1rem 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1)}
+    .sidebar {background: white !important; border-radius: 15px; padding: 1.5rem !important}
+    .stButton>button {background-color: #4a90e2 !important; color: white !important}
+</style>
+""", unsafe_allow_html=True)
+
+# Data loading functions
 def load_csv_from_drive(url):
     file_id = url.split("/")[-2]
     download_url = f"https://drive.google.com/uc?id={file_id}"
-    response = requests.get(download_url)
-    return pd.read_csv(BytesIO(response.content), encoding="latin1")
+    return pd.read_csv(BytesIO(requests.get(download_url).content), encoding="latin1")
 
-# Function to Load Pickle Files from Google Drive
 def load_pickle_from_drive(url):
     file_id = url.split("/")[-2]
     download_url = f"https://drive.google.com/uc?id={file_id}"
-    response = requests.get(download_url)
-    return pickle.loads(response.content)
+    return pickle.loads(requests.get(download_url).content)
 
-# Load Data
-df = load_csv_from_drive("https://drive.google.com/file/d/1ACsDx6V8k19J-S63LSseWYRp_rsM-CG3/view?usp=sharing")
-books_df = load_csv_from_drive("https://drive.google.com/file/d/1miWbT_4ltE9uuPPSS2nBRMPNiExyT0Bj/view?usp=sharing")
+# Load datasets first
+@st.cache_resource
+def load_data():
+    df = load_csv_from_drive("https://drive.google.com/file/d/1ACsDx6V8k19J-S63LSseWYRp_rsM-CG3/view")
+    books_df = load_csv_from_drive("https://drive.google.com/file/d/1miWbT_4ltE9uuPPSS2nBRMPNiExyT0Bj/view")
+    merged_df = pd.merge(df, books_df[['ISBN', 'Image-URL-M']], on='ISBN', how='left')
+    return merged_df
 
-# Merge with book images
-df = pd.merge(df, books_df[['ISBN', 'Image-URL-M']], on='ISBN', how='left')
+@st.cache_resource
+def load_models():
+    return {
+        'popular_books': load_pickle_from_drive("https://drive.google.com/file/d/1f2BNeiE3_8Y9akIvB96QgqgG9JdtiDdQ/view"),
+        'knn': load_pickle_from_drive("https://drive.google.com/file/d/1m-45jM6Q4c32DeyiSEhfAPuUIhohlKSX/view"),
+        'content_based': load_pickle_from_drive("https://drive.google.com/file/d/1nbDPLTxckiJnJp8FwFHP1fXyUfyNBsVl/view"),
+        'user_matrix': load_pickle_from_drive("https://drive.google.com/file/d/1enD9Rjtbu_zXJFDNtPYxsK4l6Q4ZNaFC/view")
+    }
 
-# Load Pickle Models
-popular_books = load_pickle_from_drive("https://drive.google.com/file/d/1f2BNeiE3_8Y9akIvB96QgqgG9JdtiDdQ/view?usp=sharing")
-knn = load_pickle_from_drive("https://drive.google.com/file/d/1m-45jM6Q4c32DeyiSEhfAPuUIhohlKSX/view?usp=sharing")
-content_based_data = load_pickle_from_drive("https://drive.google.com/file/d/1nbDPLTxckiJnJp8FwFHP1fXyUfyNBsVl/view?usp=sharing")
-user_item_matrix = load_pickle_from_drive("https://drive.google.com/file/d/1enD9Rjtbu_zXJFDNtPYxsK4l6Q4ZNaFC/view?usp=drive_link")
-
-# Extract Content-Based Data
-tfidf = content_based_data['tfidf_model']
-book_similarity = content_based_data['book_similarity_matrix']
-book_index = {k.lower(): v for k, v in content_based_data['book_index'].items()}  # Lowercase for case-insensitivity
-
-# Recommendation Functions
+# Function definitions after loading data
 def get_popular_recommendations(top_n=10):
-    return popular_books.head(top_n)
+    return models['popular_books'].head(top_n)
 
-def get_knn_recommendations_for_user(user_id, n=10):
-    if user_id not in user_item_matrix.index:
-        return "User not found in the matrix!"
-    user_idx = user_item_matrix.index.get_loc(user_id)
-    distances, indices = knn.kneighbors(csr_matrix(user_item_matrix.iloc[user_idx]), n_neighbors=n+1)
-    similar_users_isbns = user_item_matrix.iloc[indices.flatten()[1:]].columns.tolist()
-    recommended_books = df[df["ISBN"].isin(similar_users_isbns)][["Book-Title", "Book-Author", "Image-URL-M"]].drop_duplicates()
-    return recommended_books.head(n)
+def get_knn_recommendations(user_id, n=10):
+    if user_id not in models['user_matrix'].index:
+        return "User not found!"
+    user_idx = models['user_matrix'].index.get_loc(user_id)
+    distances, indices = models['knn'].kneighbors(csr_matrix(models['user_matrix'].iloc[user_idx]), n_neighbors=n+1)
+    return models['user_matrix'].iloc[indices.flatten()[1:]].columns.tolist()
 
-def get_content_based_recommendations(book_title, n=15):
-    book_title_lower = book_title.lower()
-    if book_title_lower not in book_index:
-        return "Book not found!"
-    idx = book_index[book_title_lower]
-    similar_books = book_similarity[idx].argsort()[-n-1:-1][::-1]
-    return df.iloc[similar_books][["Book-Title", "Book-Author", "Image-URL-M"]].drop_duplicates()
+# Load data and models
+df = load_data()
+models = load_models()
 
 # Streamlit UI
-st.title("📚 Book Recommendation System")
-st.sidebar.header("Select a Recommendation Type")
+st.markdown("<div class='header'><h1>Book Recommendation System</h1></div>", unsafe_allow_html=True)
 
-option = st.sidebar.selectbox(
-    "Choose a recommendation method:",
-    ("Popularity-Based", "User-Based Collaborative Filtering", "Content-Based")
-)
+with st.sidebar:
+    st.header("📚 Recommendation Type")
+    option = st.selectbox(
+        "Choose method:",
+        ("Popularity-Based", "User-Based", "Content-Based"),
+        label_visibility="collapsed"
+    )
 
+# Recommendation display functions
+def display_books(books_df, cols=5):
+    columns = st.columns(cols)
+    for idx, (_, row) in enumerate(books_df.iterrows()):
+        with columns[idx % cols]:
+            with st.container():
+                st.markdown("<div class='book-card'>", unsafe_allow_html=True)
+                st.image(row["Image-URL-M"], use_column_width=True)
+                st.markdown(f"**{row['Book-Title']}**")
+                st.caption(f"by {row['Book-Author']}")
+                st.markdown("</div>", unsafe_allow_html=True)
+
+# Handle recommendations
 if option == "Popularity-Based":
-    st.subheader("🔥 Popular Books")
-    num_books = st.slider("Number of books to show", 5, 20, 10)
-    recommendations = get_popular_recommendations(num_books)
-    
-    for _, row in recommendations.iterrows():
-        st.markdown(f"""
-        <div class='book-card'>
-            <p class='book-title'>📖 {row['Book-Title']}</p>
-            <p class='book-author'>by {row['Book-Author']}</p>
-        </div>
-        """, unsafe_allow_html=True)
+    st.subheader("📈 Trending Books")
+    num_books = st.slider("Number of books", 5, 25, 12)
+    display_books(get_popular_recommendations(num_books))
 
-elif option == "User-Based Collaborative Filtering":
+elif option == "User-Based":
     st.subheader("👤 Personalized Recommendations")
-    user_id = st.number_input("Enter User ID", min_value=1, step=1, value=388)
+    user_id = st.number_input("Enter User ID", min_value=1, value=388)
     if st.button("Get Recommendations"):
-        recommendations = get_knn_recommendations_for_user(user_id)
-        if isinstance(recommendations, str):
-            st.error(recommendations)
-        else:
-            for _, row in recommendations.iterrows():
-                st.image(row["Image-URL-M"], width=100)
-                st.markdown(f"**{row['Book-Title']}** by {row['Book-Author']}")
+        recommendations = get_knn_recommendations(user_id)
+        display_books(df[df["ISBN"].isin(recommendations)])
 
 elif option == "Content-Based":
-    st.subheader("📖 Content-Based Recommendations")
-    book_title = st.text_input("Enter a book title", value="The Da Vinci Code")
-    if st.button("Find Similar Books"):
-        recommendations = get_content_based_recommendations(book_title)
-        if isinstance(recommendations, str):
-            st.error(recommendations)
-        else:
-            for _, row in recommendations.iterrows():
-                st.image(row["Image-URL-M"], width=100)
-                st.markdown(f"**{row['Book-Title']}** by {row['Book-Author']}")
+    st.subheader("🔍 Similar Books")
+    book_title = st.text_input("Enter book title", "The Da Vinci Code")
+    if st.button("Find Similar"):
+        # Add content-based recommendation logic
+        pass
+
+st.markdown("---")
+st.markdown("<div style='text-align: center; color: #666; margin-top: 2rem'>Book Recommendation System v2.0</div>", unsafe_allow_html=True)
